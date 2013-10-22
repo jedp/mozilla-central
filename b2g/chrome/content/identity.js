@@ -30,18 +30,6 @@ function log(...aMessageArgs) {
 
 log("\n\n======================= identity.js =======================\n\n");
 
-// This script may be injected more than once into an iframe.
-// Ensure we don't redefine contstants
-if (typeof kIdentityJSLoaded === 'undefined') {
-  const kIdentityDelegateWatch = "identity-delegate-watch";
-  const kIdentityDelegateRequest = "identity-delegate-request";
-  const kIdentityDelegateLogout = "identity-delegate-logout";
-  const kIdentityDelegateReady = "identity-delegate-ready";
-  const kIdentityDelegateFinished = "identity-delegate-finished";
-  const kIdentityControllerDoMethod = "identity-controller-doMethod";
-  const kIdentktyJSLoaded = true;
-}
-
 var showUI = false;
 var options = {};
 var isLoaded = false;
@@ -58,7 +46,7 @@ function identityCall(message) {
   if (options._internal) {
     message._internal = options._internal;
   }
-  sendAsyncMessage(kIdentityControllerDoMethod, message);
+  sendAsyncMessage("identity-persona-controller-doMethod", message);
 }
 
 /*
@@ -70,7 +58,7 @@ function identityCall(message) {
 function closeIdentityDialog() {
   // tell gecko we're done.
   func = null; options = null;
-  sendAsyncMessage(kIdentityDelegateFinished);
+  sendAsyncMessage("identity-persona-delegate-finished");
 }
 
 /*
@@ -139,8 +127,8 @@ addEventListener("DOMContentLoaded", function(e) {
 });
 
 // listen for request
-addMessageListener(kIdentityDelegateRequest, function(aMessage) {
-  log("injected identity.js received", kIdentityDelegateRequest);
+addMessageListener("identity-persona-delegate-request", function(aMessage) {
+  log("injected identity.js received request");
   options = aMessage.json;
   showUI = true;
   func = doInternalRequest;
@@ -148,8 +136,8 @@ addMessageListener(kIdentityDelegateRequest, function(aMessage) {
 });
 
 // listen for watch
-addMessageListener(kIdentityDelegateWatch, function(aMessage) {
-  log("injected identity.js received", kIdentityDelegateWatch);
+addMessageListener("identity-persona-delegate-watch", function(aMessage) {
+  log("injected identity.js received watch");
   options = aMessage.json;
   showUI = false;
   func = doInternalWatch;
@@ -157,8 +145,8 @@ addMessageListener(kIdentityDelegateWatch, function(aMessage) {
 });
 
 // listen for logout
-addMessageListener(kIdentityDelegateLogout, function(aMessage) {
-  log("injected identity.js received", kIdentityDelegateLogout);
+addMessageListener("identity-persona-delegate-logout", function(aMessage) {
+  log("injected identity.js received logout");
   options = aMessage.json;
   showUI = false;
   func = doInternalLogout;

@@ -108,13 +108,13 @@ const kDoneIdentityDialog = "id-dialog-done";
 const kCloseIdentityDialog = "id-dialog-close-iframe";
 
 // Observer messages to communicate to shim
-const kIdentityDelegateWatch = "identity-delegate-watch";
-const kIdentityDelegateRequest = "identity-delegate-request";
-const kIdentityDelegateLogout = "identity-delegate-logout";
-const kIdentityDelegateFinished = "identity-delegate-finished";
-const kIdentityDelegateReady = "identity-delegate-ready";
+const kIdentityDelegateWatch = "identity-persona-delegate-watch";
+const kIdentityDelegateRequest = "identity-persona-delegate-request";
+const kIdentityDelegateLogout = "identity-persona-delegate-logout";
+const kIdentityDelegateFinished = "identity-persona-delegate-finished";
+const kIdentityDelegateReady = "identity-persona-delegate-ready";
 
-const kIdentityControllerDoMethod = "identity-controller-doMethod";
+const kIdentityControllerDoMethod = "identity-persona-controller-doMethod";
 
 function log(...aMessageArgs) {
   Logger.log.apply(Logger, ["SignInToWebsiteController"].concat(aMessageArgs));
@@ -150,12 +150,12 @@ function Pipe() {
 Pipe.prototype = {
   init: function pipe_init() {
     Services.obs.addObserver(this, "identity-child-process-shutdown", false);
-    Services.obs.addObserver(this, "identity-controller-unwatch", false);
+    Services.obs.addObserver(this, "identity-persona-unwatch", false);
   },
 
   uninit: function pipe_uninit() {
     Services.obs.removeObserver(this, "identity-child-process-shutdown");
-    Services.obs.removeObserver(this, "identity-controller-unwatch");
+    Services.obs.removeObserver(this, "identity-persona-unwatch");
   },
 
   observe: function Pipe_observe(aSubject, aTopic, aData) {
@@ -164,12 +164,12 @@ Pipe.prototype = {
       options = aSubject.wrappedJSObject;
     }
     switch (aTopic) {
-      case "identity-child-process-shutdown":
+      case "identity-persona-cp-shutdown":
         log("pipe removing watchers by message manager");
         this._removeWatchers(null, options.messageManager);
         break;
 
-      case "identity-controller-unwatch":
+      case "identity-persona-unwatch":
         log("unwatching", options.id);
         this._removeWatchers(options.id, options.messageManager);
         break;
@@ -353,15 +353,15 @@ this.SignInToWebsiteController = {
   init: function SignInToWebsiteController_init(aOptions) {
     aOptions = aOptions || {};
     this.pipe = aOptions.pipe || new Pipe();
-    Services.obs.addObserver(this, "identity-controller-watch", false);
-    Services.obs.addObserver(this, "identity-controller-request", false);
-    Services.obs.addObserver(this, "identity-controller-logout", false);
+    Services.obs.addObserver(this, "identity-persona-watch", false);
+    Services.obs.addObserver(this, "identity-persona-request", false);
+    Services.obs.addObserver(this, "identity-persona-logout", false);
   },
 
   uninit: function SignInToWebsiteController_uninit() {
-    Services.obs.removeObserver(this, "identity-controller-watch");
-    Services.obs.removeObserver(this, "identity-controller-request");
-    Services.obs.removeObserver(this, "identity-controller-logout");
+    Services.obs.removeObserver(this, "identity-persona-watch");
+    Services.obs.removeObserver(this, "identity-persona-request");
+    Services.obs.removeObserver(this, "identity-persona-logout");
   },
 
   observe: function SignInToWebsiteController_observe(aSubject, aTopic, aData) {
@@ -371,13 +371,13 @@ this.SignInToWebsiteController = {
       options = aSubject.wrappedJSObject;
     }
     switch (aTopic) {
-      case "identity-controller-watch":
+      case "identity-persona-watch":
         this.doWatch(options);
         break;
-      case "identity-controller-request":
+      case "identity-persona-request":
         this.doRequest(options);
         break;
-      case "identity-controller-logout":
+      case "identity-persona-logout":
         this.doLogout(options);
         break;
       default:

@@ -21,9 +21,13 @@ Cu.import('resource://gre/modules/ErrorPage.jsm');
 Cu.import('resource://gre/modules/NetworkStatsService.jsm');
 #endif
 
-// identity
+// identity - persona and firefox accounts
 Cu.import('resource://gre/modules/SignInToWebsite.jsm');
 SignInToWebsiteController.init();
+
+// XXX hide under a preference and only load if account support is true
+Cu.import('resource://gre/modules/SignInToFXA.jsm');
+SignInToFXA.init();
 
 XPCOMUtils.defineLazyServiceGetter(Services, 'env',
                                    '@mozilla.org/process/environment;1',

@@ -9,8 +9,11 @@
  * channels for navigator.id, leaving the certificate storage to a
  * server-provided app.
  *
- * On b2g, the messages identity-controller-watch, -request, and
+ * On b2g, the messages identity-persona-watch, -request, and
  * -logout, are observed by the component SignInToWebsite.jsm.
+ *
+ * The identity-firefox-accounts- messages are observed by
+ * SignInToFXA.jsm.
  */
 
 "use strict";
@@ -36,8 +39,15 @@ XPCOMUtils.defineLazyModuleGetter(this,
 function log(...aMessageArgs) {
   Logger.log.apply(Logger, ["minimal core"].concat(aMessageArgs));
 }
+
 function reportError(...aMessageArgs) {
   Logger.reportError.apply(Logger, ["core"].concat(aMessageArgs));
+}
+
+function makeMessageTopic(aService, aMethod) {
+  aService = aService || 'persona';
+  log("make message topic for service = " + aService);
+  return ["identity", aService, aMethod].join("-");
 }
 
 function makeMessageObject(aRpCaller) {
@@ -121,7 +131,9 @@ IDService.prototype = {
    *        (Object)  an object that represents the caller document, and
    *                  is expected to have properties:
    *                  - id (unique, e.g. uuid)
-   *                  - loggedInUser (string or null)
+   *                  - appStatus (number)
+   *                  - wantIssuer (string) (optional)
+   *                  - loggedInUser (string or null) (deprecated)
    *                  - origin (string)
    *
    *                  and a bunch of callbacks
@@ -130,36 +142,54 @@ IDService.prototype = {
    *                  - doLogout()
    *                  - doError()
    *                  - doCancel()
+   * 
+   * The parameters 'id', 'origin', and 'appStatus' are always set by
+   * nsDOMIdentity.js.  Any values the caller provides to these will
+   * always be overwritten.
    *
+   * appStatus reports the privileges of the principal that invoked the
+   * DOM API.  Possible values are:
+   *   0: APP_STATUS_NOT_INSTALLED
+   *   1: APP_STATUS_INSTALLED
+   *   2: APP_STATUS_PRIVILEGED
+   *   3: APP_STATUS_CERTIFIED
    */
   watch: function watch(aRpCaller) {
     // store the caller structure and notify the UI observers
+    log("watch: " + JSON.stringify(aRpCaller));
     this._rpFlows[aRpCaller.id] = aRpCaller;
 
-    log("flows:", Object.keys(this._rpFlows).join(', '));
+    log("current flows:", Object.keys(this._rpFlows).join(', '));
 
+    let messageName = makeMessageTopic(aRpCaller.wantIssuer, "watch");
     let options = makeMessageObject(aRpCaller);
-    log("sending identity-controller-watch:", options);
-    Services.obs.notifyObservers({wrappedJSObject: options},"identity-controller-watch", null);
+
+    log("sending", messageName, "options: ", options);
+    Services.obs.notifyObservers({wrappedJSObject: options}, messageName, null);
   },
 
   /*
    * The RP has gone away; remove handles to the hidden iframe.
    * It's probable that the frame will already have been cleaned up.
+   *
+   * unwatch is not part of the BrowserID protocol; it's only something
+   * we do on platform to keep a refcount of processes
    */
   unwatch: function unwatch(aRpId, aTargetMM) {
     let rp = this._rpFlows[aRpId];
     if (!rp) {
       return;
     }
+    let messageName = makeMessageTopic(rp.wantIssuer, "unwatch");
 
     let options = makeMessageObject({
       id: aRpId,
       origin: rp.origin,
       messageManager: aTargetMM
     });
-    log("sending identity-controller-unwatch for id", options.id, options.origin);
-    Services.obs.notifyObservers({wrappedJSObject: options}, "identity-controller-unwatch", null);
+
+    log("sending", messageName, "options: ", options);
+    Services.obs.notifyObservers({wrappedJSObject: options}, messageName, null);
 
     // Stop sending messages to this window
     delete this._rpFlows[aRpId];
@@ -181,12 +211,15 @@ IDService.prototype = {
       reportError("request() called before watch()");
       return;
     }
+    let messageName = makeMessageTopic(rp.wantIssuer, "request");
 
     // Notify UX to display identity picker.
     // Pass the doc id to UX so it can pass it back to us later.
     let options = makeMessageObject(rp);
     objectCopy(aOptions, options);
-    Services.obs.notifyObservers({wrappedJSObject: options}, "identity-controller-request", null);
+
+    log("sending", messageName, "options: ", options);
+    Services.obs.notifyObservers({wrappedJSObject: options}, messageName, null);
   },
 
   /**
@@ -203,9 +236,12 @@ IDService.prototype = {
       reportError("logout() called before watch()");
       return;
     }
+    let messageName = makeMessageTopic(rp.wantIssuer, "logout");
 
     let options = makeMessageObject(rp);
-    Services.obs.notifyObservers({wrappedJSObject: options}, "identity-controller-logout", null);
+
+    log("sending", messageName, "options: ", options);
+    Services.obs.notifyObservers({wrappedJSObject: options}, messageName, null);
   },
 
   childProcessShutdown: function childProcessShutdown(messageManager) {

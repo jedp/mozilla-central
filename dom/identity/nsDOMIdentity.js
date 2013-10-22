@@ -83,21 +83,6 @@ nsDOMIdentity.prototype = {
       throw new Error("options argument to watch is required");
     }
 
-    // Check for required callbacks
-    let requiredCallbacks = ["onlogin", "onlogout"];
-    for (let cbName of requiredCallbacks) {
-      if ((!(cbName in aOptions))
-          || typeof(aOptions[cbName]) !== "function") {
-           throw new Error(cbName + " callback is required.");
-         }
-    }
-
-    // Optional callback "onready"
-    if (aOptions["onready"]
-        && typeof(aOptions['onready']) !== "function") {
-      throw new Error("onready must be a function");
-    }
-
     let message = this.DOMIdentityMessage(aOptions);
 
     // loggedInUser vs loggedInEmail
@@ -379,6 +364,7 @@ nsDOMIdentity.prototype = {
     // Store window and origin URI.
     this._window = aWindow;
     this._origin = aWindow.document.nodePrincipal.origin;
+    this._appStatus = aWindow.document.nodePrincipal.appStatus;
 
     // Setup identifiers for current window.
     let util = aWindow.QueryInterface(Ci.nsIInterfaceRequestor)
@@ -535,6 +521,13 @@ nsDOMIdentity.prototype = {
 
     // window origin
     message.origin = this._origin;
+
+    // Enumeration of appStatus values:
+    // APP_STATUS_NOT_INSTALLED = 0
+    // APP_STATUS_INSTALLED     = 1
+    // APP_STATUS_PRIVILEGED    = 2
+    // APP_STATUS_CERTIFIED     = 3
+    message.appStatus = this._appStatus;
 
     return message;
   },
