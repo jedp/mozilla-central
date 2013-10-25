@@ -1,7 +1,7 @@
 /* Any copyright is dedicated to the Public Domain.
    http://creativecommons.org/publicdomain/zero/1.0/ */
 
-"use strict"
+"use strict";
 
 Cu.import('resource://gre/modules/identity/LogUtils.jsm');
 
@@ -116,9 +116,34 @@ function test_dsa() {
   jwcrypto.generateKeyPair("DS160", checkDSA);
 }
 
-var TESTS = [test_sanity, test_generate, test_get_assertion];
+function test_bundle() {
+  do_test_pending();
+  let cert = "my-cert";
 
-TESTS = TESTS.concat([test_rsa, test_dsa]);
+  jwcrypto.generateKeyPair(
+    "DS160",
+    function(err, kp) {
+      jwcrypto.generateAssertion(cert, kp, RP_ORIGIN, function(err, assertion) {
+        do_check_null(err);
+
+        let bundle = jwcrypto.cert.bundle([cert], assertion);
+        do_check_neq(bundle.indexOf("~"), -1);
+
+        do_test_finished();
+        run_next_test();
+      });
+    });
+}
+
+var TESTS = [
+  test_sanity,
+  test_generate,
+  test_get_assertion,
+  test_bundle,
+  
+  test_rsa,
+  test_dsa
+];
 
 TESTS.forEach(add_test);
 

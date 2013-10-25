@@ -82,6 +82,19 @@ function sign(aPayload, aKeypair, aCallback) {
   });
 }
 
+function certClass()
+{
+}
+
+certClass.prototype = {
+  bundle: function(aCerts, aSignedAssertion) {
+    if (!aCerts || aCerts.length == 0) {
+      throw "certificates must be a non-empty array";
+    }
+    return [].concat(aCerts, aSignedAssertion).join('~');
+  }
+};
+
 function jwcryptoClass()
 {
 }
@@ -121,8 +134,9 @@ jwcryptoClass.prototype = {
       var signedAssertion = headerBytes + "." + payloadBytes + "." + signature;
       return aCallback(null, aCert + "~" + signedAssertion);
     });
-  }
+  },
 
+  cert: new certClass()
 };
 
 this.jwcrypto = new jwcryptoClass();
